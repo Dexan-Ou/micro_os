@@ -13,8 +13,9 @@ Start:
 Mainmenu:
       call  Cleanscreen
       ;print mainmenu
-	mov	bp, MainMessage		
-	mov	ax, MainMessageLength 
+	mov	bp, MainMessage
+	mov	ax, MainMessageLength
+      mov   byte[style], 03h
 	call  Print
       ;set cursor shape
       mov   ax, 0100h
@@ -26,9 +27,10 @@ Mainmenu:
       mov   byte[y], 1
       ;print file
       ;print new file
+      mov   byte[style], 07h
       cmp   word[selectfile], 0
       call  Printselect
-	mov	bp, CreateMessage		
+	mov	bp, CreateMessage
 	mov	ax, CreateMessageLength 
 	call  Print
 
@@ -50,9 +52,11 @@ Printnewline:
       ret
 
 Printselect:
+      mov   byte[style], 0Eh
 	mov	bp, Select		
 	mov	ax, SelectLength 
 	call  Print
+      mov   byte[style], 0Fh
       ret
 
 Cleanscreen:
@@ -72,7 +76,7 @@ PrintLoop:
       dec   word[count]
       jz    PrintEnd
       ;set the output word
-      mov   ah, 07h           ;  0000：黑底、1111：亮白字（默认值为07h）
+      mov   ah, byte[style]   ;  0000：黑底、1111：亮白字（默认值为07h）
 	mov   al, byte[bp]
       mov   cx, ax            ;save ax
       ;calculate position
@@ -108,10 +112,11 @@ AxInc:
 
 Datafield:
       count dw 0
-      selectfile dw 0
-      totalfile dw 0
+      selectfile  dw 0
+      totalfile   dw 0
       x     dw 0
       y     dw 0
+      style db 0
 MainMessage:
       db '" ==================================================', 0ah
       db '"                VIN - VIN Is Non-vim', 0ah
