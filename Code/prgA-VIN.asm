@@ -1,6 +1,8 @@
-org   8100h
-VGAAddr     equ 0B800h
-FileAddr    equ 09000h
+org   08100h
+VGAAddr           equ 0B800h
+FileAddr          equ 02000h
+FileField         equ 00a00h
+FileNameFiled     equ 00020h
 Start:
       mov   ax, cs
       mov   ds, ax
@@ -9,7 +11,8 @@ Start:
       mov   gs, ax
       mov   ax, word[FileAddr]
       mov   word[totalfile], ax
-      mov   word[selectfile], 0
+NewStart:
+      mov   word[selectfile], 1
 Mainmenu:
       call  Cleanscreen
       ;print mainmenu
@@ -22,14 +25,43 @@ Mainmenu:
       mov   cx, 2607h
       int   10h
       mov   ax, word[totalfile]
-      mov   word[count], ax
+      mov   word[FIcount], 0
       mov   byte[x], 7
       mov   byte[y], 1
       ;print file
-      ;print new file
+Loop1:
+      inc   word[FIcount]
+      mov   bx, word[FIcount]
+      cmp   bx, ax
+      ja    Loop1End
+      mov   ax, FileField
+      mul   bx
+      add   ax, FileAddr
+      mov   word[bpaddr], ax
       mov   byte[style], 07h
-      cmp   word[selectfile], 0
+      mov   ax, word[FIcount]
+      mov   bx, word[selectfile]
+      cmp   ax, bx
+      jnz   Loop1NotSel
       call  Printselect
+Loop1NotSel:
+      mov   ax, word[bpaddr]
+      mov   bp, ax
+      mov   ax, word[bp]
+      add   bp, 2
+      call  Print
+      call  Printnewline
+      mov   ax, word[totalfile]
+      jmp   Loop1
+      ;print new file
+Loop1End:
+      mov   byte[style], 07h
+      mov   ax, word[totalfile]
+      mov   bx, word[selectfile]
+      cmp   bx, ax
+      jle   Loop1EndNotSel
+      call  Printselect
+Loop1EndNotSel:
 	mov	bp, CreateMessage
 	mov	ax, CreateMessageLength 
 	call  Print
@@ -37,18 +69,171 @@ Mainmenu:
 Input:
       mov   ah, 0
       int   16h
-      cmp   al, 1bh
+      mov   byte[char], al
+      cmp   byte[char], 1bh
       jz    Return
+      cmp   byte[char], 57h
+      jz    ListUp
+      cmp   byte[char], 77h
+      jz    ListUp
+      cmp   byte[char], 53h
+      jz    ListDown
+      cmp   byte[char], 73h
+      jz    ListDown
+      cmp   byte[char], 0dh
+      jz    ConfirmFile
+      jmp   Mainmenu
 
-      jmp   Input
+Readfile:
+      call  Cleanscreen
+      mov   byte[style], 07h
+      mov   word[x], 24
+      mov   word[y], 62
+	mov	bp, LineEndMessage
+	mov	ax, LineEndMessageLength 
+	call  Print
+      mov   word[x], 24
+      mov   word[y], 0
+	mov	bp, Quto
+	mov	ax, QutoLength 
+	call  Print
+      mov   bx, word[selectfile]
+      mov   ax, FileField
+      mul   bx
+      add   ax, FileAddr
+      mov   bp, ax
+      mov   ax, word[bp]
+      add   bp, 2
+      call  Print
+	mov	bp, Quto
+	mov	ax, QutoLength 
+	call  Print
+      mov   byte[style], 07h
+      mov   word[x], 0
+      mov   word[y], 0
+      mov   bx, word[selectfile]
+      mov   ax, FileField
+      mul   bx
+      add   ax, FileAddr
+      add   ax, FileNameFiled
+      mov   word[bpaddr], ax
+      mov   bp, ax
+      mov   ax, word[bp]
+      add   bp, 2
+      call  Print
+      mov   ah, 0
+      int   16h
+      mov   byte[char], al
+      cmp   byte[char], 1bh
+      jz    NewStart
+      mov   byte[style], 0Fh
+      mov   word[x], 24
+      mov   word[y], 0
+	mov	bp, LineStartMessage
+	mov	ax, LineStartMessageLength 
+	call  Print
+      mov   byte[style], 07h
+      mov   word[x], 0
+      mov   word[y], 0
+      mov   bx, word[selectfile]
+      mov   ax, FileField
+      mul   bx
+      add   ax, FileAddr
+      add   ax, FileNameFiled
+      mov   word[bpaddr], ax
+      mov   bp, ax
+      mov   ax, word[bp]
+      add   bp, 2
+      call  Print
+      mov   ax, word[bpaddr]
+      mov   bp, ax
+      mov   ax, word[bp]
+      mov   cx, 780h
+      call  FileInput
+      jmp   NewStart
 
 Return:
       jmp   0h:07c00h
+
+ListUp:
+      mov   ax, word[selectfile]
+      cmp   ax, 1
+      jz    Mainmenu
+      dec   word[selectfile]
+      jmp   Mainmenu
+
+ListDown:
+      mov   ax, word[totalfile]
+      mov   bx, word[selectfile]
+      cmp   bx, ax
+      ja    Mainmenu
+      inc   word[selectfile]
+      jmp   Mainmenu
+
+ConfirmFile:
+      call  Cleanscreen
+      mov   ax, word[totalfile]
+      mov   bx, word[selectfile]
+      cmp   bx, ax
+      jle   Readfile
+      mov   byte[style], 07h
+	mov	bp, InputNameMessage
+	mov	ax, InputNameMessageLength 
+	call  Print
+      inc   word[totalfile]
+      mov   bx, word[selectfile]
+      cmp   bx, 10
+      ja    Mainmenu
+      mov   ax, FileField
+      mul   bx
+      add   ax, FileAddr
+      mov   bp, ax
+      mov   word[bp], 0
+      mov   cx, 10h
+      xor   ax, ax
+      call  FileInput
+      jmp   Readfile
+
+FileInput:
+      mov   bx, bp
+      mov   word[bpaddr], bx
+      mov   word[FIcount], ax
+      mov   word[maxcount], cx
+FIInput:
+      mov   ah, 0
+      int   16h
+      mov   byte[char], al
+      cmp   byte[char], 1bh
+      jz    FIReturn
+      mov   cx, word[maxcount]
+      mov   ax, word[FIcount]
+      cmp   cx, ax
+      jle   FIInput
+      cmp   byte[char], 1fh
+      jle   FIInput
+      cmp   byte[char], 7eh
+      ja    FIInput
+      inc   word[FIcount]
+      mov   bx, word[bpaddr]
+      mov   ax, word[FIcount]
+      mov   bp, bx
+      mov   word[bp], ax
+      inc   bp
+      add   bp, ax
+      mov   al, byte[char]
+      mov   byte[bp], al
+      mov   ax, 1
+      call  Print
+      jmp   FIInput
+
+FIReturn:
+      ret
 
 Printnewline:
 	mov	bp, Newline		
 	mov	ax, NewlineLength 
 	call  Print
+      mov   word[y], 1
       ret
 
 Printselect:
@@ -70,6 +255,7 @@ Cleanscreen:
       ret
 
 Print:
+      pusha
       mov   word[count], ax
       inc   word[count]
 PrintLoop:
@@ -89,7 +275,7 @@ PrintLoop:
 	mul   bx
 
       mov   dx, bp            ;save bp
-      cmp   byte[bp], 0ah     ;check if \n
+      cmp   byte[bp], 0dh     ;check if \r
       jz   PrintAfterL1
 	mov   bp, ax            ;set position
       mov   ax, cx            ;rebuild output word
@@ -98,12 +284,13 @@ PrintLoop:
 PrintAfterL1:
       ;calculate next position
       inc   word[y]
-      cmp   byte[bp], 0ah
+      cmp   byte[bp], 0dh
       jz    AxInc
 PrintAfterL2:
       inc   bp
 	jmp   PrintLoop
 PrintEnd:
+      popa
       ret
 AxInc:
       inc   word[x]
@@ -112,27 +299,43 @@ AxInc:
 
 Datafield:
       count dw 0
+      FIcount     dw 0
+      maxcount    dw 0
+      bpaddr      dw 0
       selectfile  dw 0
       totalfile   dw 0
       x     dw 0
       y     dw 0
       style db 0
+      char  db 0
+LineStartMessage:
+      db '-- INSERT --        '
+LineStartMessageLength  equ ($-LineStartMessage)  
+LineEndMessage:
+      db '-1,-1         All'
+LineEndMessageLength  equ ($-LineEndMessage)
 MainMessage:
-      db '" ==================================================', 0ah
-      db '"                VIN - VIN Is Non-vim', 0ah
-      db '" XJB Directory Listing                  (XJB v000)', 0ah
-      db '"   [RAM]/', 0ah
-      db '"   Sorted by    none', 0ah
-      db '"   Quick Help:  ESC:exit', 0ah
-      db '" ==================================================', 0ah
+      db '" ==================================================', 0dh
+      db '"                VIN - VIN Is Non-vim', 0dh
+      db '" XJB Directory Listing                  (XJB v000)', 0dh
+      db '"   [RAM]/', 0dh
+      db '"   Sorted by    none', 0dh
+      db '"   Quick Help: W:previous S:next Enter:confirm ESC:exit', 0dh
+      db '" ==================================================', 0dh
 MainMessageLength  equ ($-MainMessage)
 Newline:
-      db 0ah
+      db 0dh
 NewlineLength  equ ($-Newline)
 CreateMessage:
-      db 'Create New File', 0ah
+      db ' Create New File', 0dh
 CreateMessageLength  equ ($-CreateMessage)
+InputNameMessage:
+      db 'Please Input File Name(press ESC to confirm):'
+InputNameMessageLength  equ ($-InputNameMessage)
 Select:
       db '[*] '
 SelectLength  equ ($-Select)
-      times 1024-($-$$) db 0
+Quto:
+      db '"'
+QutoLength  equ ($-Quto)
+      times 1536-($-$$) db 0

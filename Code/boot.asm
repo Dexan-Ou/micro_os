@@ -3,7 +3,7 @@ OffSetPrgA  equ 08100h
 Start:
 	mov	ax, cs	       ; 置其他段寄存器值与CS相同
 	mov	ds, ax	       ; 数据段
-	mov	es, ax		 ; 置ES=DS
+      mov	es, ax		 ; 置ES=DS
 	mov   ax, 0B800h         ; 文本窗口显存起始地址
 	mov   gs, ax             ; GS = B800h
       ;mov   word[09000h], 0   ;initial VIN file space
@@ -33,7 +33,7 @@ Input:
 LoadPrgA:
       call  Cleanscreen
       mov   bx, OffSetPrgA
-      mov   ax, 0202h
+      mov   ax, 0203h
       xor   dx, dx
       mov   cx, 0002h
       int   13H
