@@ -1,5 +1,5 @@
 org   7c00h		; BIOS将把引导扇区加载到0:7C00h处，并开始执行
-OffSetPrgA  equ 08100h
+OffSetPrg   equ 08100h
 Start:
 	mov	ax, cs	       ; 置其他段寄存器值与CS相同
 	mov	ds, ax	       ; 数据段
@@ -28,16 +28,29 @@ Input:
       jz    LoadPrgA
       cmp   byte[char], 61h
       jz    LoadPrgA
+      cmp   byte[char], 42h
+      jz    LoadPrgB
+      cmp   byte[char], 62h
+      jz    LoadPrgB
       jmp   Input
 
 LoadPrgA:
       call  Cleanscreen
-      mov   bx, OffSetPrgA
+      mov   bx, OffSetPrg
       mov   ax, 0203h
       xor   dx, dx
       mov   cx, 0002h
       int   13H
-      jmp   OffSetPrgA
+      jmp   OffSetPrg
+
+LoadPrgB:
+      call  Cleanscreen
+      mov   bx, OffSetPrg
+      mov   ax, 0202h
+      xor   dx, dx
+      mov   cx, 0005h
+      int   13H
+      jmp   OffSetPrg
 
 Shutdown:
       ;check if APM exist
